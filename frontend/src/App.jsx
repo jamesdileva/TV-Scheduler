@@ -1,0 +1,113 @@
+import { useEffect, useState } from "react";
+
+const API_BASE_URL = "https://0vs48kzu7i.execute-api.us-east-1.amazonaws.com/";
+
+function App() {
+  const [episodes, setEpisodes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchSchedule() {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/schedule/today`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch schedule");
+        }
+
+        const data = await response.json();
+        setEpisodes(data.slice(0, 20)); // show first 20 episodes
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchSchedule();
+  }, []);
+
+  return (
+    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <header
+        style={{
+          marginBottom: "20px",
+          borderBottom: "2px solid #ddd",
+          paddingBottom: "10px",
+        }}
+      >
+        <h1>📺 TV Scheduler</h1>
+        <p>Your personal TV episode dashboard</p>
+      </header>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: "20px",
+        }}
+      >
+        {/* Today's Episodes */}
+        <section
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <h2>Today's Episodes</h2>
+
+          {loading && <p>Loading schedule...</p>}
+          {error && <p>Error: {error}</p>}
+
+          {!loading &&
+            !error &&
+            episodes.map((episode) => (
+              <div
+                key={`${episode.showId}-${episode.season}-${episode.episode}`}
+                style={{
+                  padding: "8px 0",
+                  borderBottom: "1px solid #eee",
+                }}
+              >
+                <strong>{episode.showName}</strong>
+                <br />
+                S{episode.season}E{episode.episode} — {episode.episodeName}
+                <br />
+                <small>{episode.airTime}</small>
+              </div>
+            ))}
+        </section>
+
+        {/* My Shows */}
+        <section
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <h2>My Shows</h2>
+          <p>Your saved shows will appear here.</p>
+        </section>
+
+        {/* Show Details */}
+        <section
+          style={{
+            border: "1px solid #ccc",
+            borderRadius: "8px",
+            padding: "16px",
+          }}
+        >
+          <h2>Show Details</h2>
+          <p>Last aired and episode history will appear here.</p>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export default App;
