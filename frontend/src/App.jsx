@@ -1,12 +1,32 @@
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = "https://0vs48kzu7i.execute-api.us-east-1.amazonaws.com/";
+const API_BASE_URL = "https://0vs48kzu7i.execute-api.us-east-1.amazonaws.com";
 
 function App() {
   const [episodes, setEpisodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [watchlist, setWatchlist] = useState([]);
 
+  // Save a show to DynamoDB, then reload watchlist
+  async function saveShow(episode) {
+    await fetch(`${API_BASE_URL}/watchlist`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        showId: episode.showId,
+        showName: episode.showName,
+      }),
+    });
+
+    const response = await fetch(`${API_BASE_URL}/watchlist`);
+    const data = await response.json();
+    setWatchlist(data);
+  }
+
+  // Load today's TV schedule
   useEffect(() => {
     async function fetchSchedule() {
       try {
@@ -19,7 +39,7 @@ function App() {
         }
 
         const data = await response.json();
-        setEpisodes(data.slice(0, 20)); // show first 20 episodes
+        setEpisodes(data.slice(0, 20));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -28,6 +48,13 @@ function App() {
     }
 
     fetchSchedule();
+  }, []);
+
+  // Load saved watchlist
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/watchlist`)
+      .then((res) => res.json())
+      .then((data) => setWatchlist(data));
   }, []);
 
   return (
@@ -78,6 +105,14 @@ function App() {
                 S{episode.season}E{episode.episode} — {episode.episodeName}
                 <br />
                 <small>{episode.airTime}</small>
+                <br />
+
+                <button
+                  onClick={() => saveShow(episode)}
+                  style={{ marginTop: "6px" }}
+                >
+                  Save to My Shows
+                </button>
               </div>
             ))}
         </section>
@@ -91,7 +126,22 @@ function App() {
           }}
         >
           <h2>My Shows</h2>
-          <p>Your saved shows will appear here.</p>
+
+          {watchlist.length === 0 ? (
+            <p>No saved shows yet.</p>
+          ) : (
+            watchlist.map((show) => (
+              <div
+                key={show.showId}
+                style={{
+                  padding: "8px 0",
+                  borderBottom: "1px solid #eee",
+                }}
+              >
+                {show.showName}
+              </div>
+            ))
+          )}
         </section>
 
         {/* Show Details */}

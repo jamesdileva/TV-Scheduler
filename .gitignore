@@ -8,11 +8,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
+dist/
+build/
 dist-ssr
 *.local
 .env
-.aws
+.aws/
 .DS_Store
 # Editor directories and files
 .vscode/*
