@@ -7,6 +7,28 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [watchlist, setWatchlist] = useState([]);
+  const [selectedShow, setSelectedShow] = useState(null);
+  
+async function deleteShow(showId) {
+  await fetch(`${API_BASE_URL}/watchlist/${showId}`, {
+    method: "DELETE",
+  });
+
+  const res = await fetch(`${API_BASE_URL}/watchlist`);
+  const data = await res.json();
+  setWatchlist(data);
+}
+
+async function fetchDetails(showName) {
+  const response = await fetch(
+    `${API_BASE_URL}/show-details?name=${encodeURIComponent(showName)}`
+  );
+
+  const data = await response.json();
+  setSelectedShow(data);
+  console.log("Fetching details for:", showName);
+  console.log("Received:", data);
+}
 
   // Save a show to DynamoDB, then reload watchlist
   async function saveShow(episode) {
@@ -126,22 +148,19 @@ function App() {
           }}
         >
           <h2>My Shows</h2>
+      {watchlist.map((show) => (
+        <div key={show.showId}>
+          <strong>{show.showName}</strong>
 
-          {watchlist.length === 0 ? (
-            <p>No saved shows yet.</p>
-          ) : (
-            watchlist.map((show) => (
-              <div
-                key={show.showId}
-                style={{
-                  padding: "8px 0",
-                  borderBottom: "1px solid #eee",
-                }}
-              >
-                {show.showName}
-              </div>
-            ))
-          )}
+          <button onClick={() => fetchDetails(show.showName)}>
+            Expand
+          </button>
+
+          <button onClick={() => deleteShow(show.showId)}>
+            Delete
+          </button>
+        </div>
+      ))}
         </section>
 
         {/* Show Details */}
@@ -153,7 +172,30 @@ function App() {
           }}
         >
           <h2>Show Details</h2>
-          <p>Last aired and episode history will appear here.</p>
+
+          {!selectedShow && (
+            <p>Select a show from your watchlist to see details.</p>
+          )}
+
+          {selectedShow && (
+            <div>
+              <h3>{selectedShow.name}</h3>
+
+              {selectedShow.nextEpisode && (
+                <p>
+                  Next Episode Airs: {selectedShow.nextEpisode.airdate}
+                </p>
+              )}
+
+              {selectedShow.summary && (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: selectedShow.summary,
+                  }}
+                />
+              )}
+            </div>
+          )}
         </section>
       </div>
     </div>

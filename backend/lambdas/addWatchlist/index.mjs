@@ -1,5 +1,9 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  ScanCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -9,8 +13,7 @@ const TABLE_NAME = "tv-scheduler-watchlist";
 export const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
-
-    const { showId, showName } = body;
+    let { showId, showName } = body;
 
     if (!showId || !showName) {
       return {
@@ -20,12 +23,35 @@ export const handler = async (event) => {
       };
     }
 
+    // normalize type (VERY IMPORTANT for DynamoDB)
+    showId = Number(showId);
+
+    // duplicate check
+    const existing = await docClient.send(
+      new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: "showId = :id",
+        ExpressionAttributeValues: {
+          ":id": showId,
+        },
+      })
+    );
+
+    if (existing.Items?.length > 0) {
+      return {
+        statusCode: 200,
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({ message: "Already saved" }),
+      };
+    }
+
     const item = {
       showId,
       showName,
       savedAt: new Date().toISOString(),
     };
 
+    // 🔥 THIS WAS MISSING (CRITICAL)
     await docClient.send(
       new PutCommand({
         TableName: TABLE_NAME,
