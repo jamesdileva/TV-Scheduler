@@ -148,6 +148,43 @@ function App() {
     console.log("Received:", data);
   }
 
+  async function loadSchedule() {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/schedule/today`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch schedule");
+      }
+
+      const data = await response.json();
+
+      const sorted = [...data].sort((a, b) => {
+        const dateCompare = (a.airDate || "").localeCompare(
+          b.airDate || ""
+        );
+
+        if (dateCompare !== 0) {
+          return dateCompare;
+        }
+
+        return (a.airTime || "").localeCompare(
+          b.airTime || ""
+        );
+      });
+
+      setEpisodes(sorted);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // ======================================================
   // EFFECTS
   // ======================================================
@@ -176,8 +213,8 @@ function App() {
       }
     }
 
-    fetchSchedule();
-    loadWatchlist();
+      loadSchedule();
+      loadWatchlist();
   }, []);
 
   // ======================================================
@@ -200,7 +237,14 @@ function App() {
         {/* Today's Episodes */}
         <section style={scrollSectionStyle}>
           <h2 style={{ marginTop: 0 }}>Today's Episodes</h2>
-
+          <div style={{ marginBottom: "16px" }}>
+              <button
+                onClick={loadSchedule}
+                style={buttonStyle}
+              >
+                🔄 Refresh Schedule
+              </button>
+            </div>
           {loading && <p>Loading schedule...</p>}
           {error && <p>Error: {error}</p>}
 

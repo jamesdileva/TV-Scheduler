@@ -127,26 +127,92 @@ app.delete("/watchlist/:showId", (req, res) => {
 
 // ======================================================
 // GET /schedule/today
+// Fetch yesterday, today, and tomorrow to avoid missing
+// shows because of timezone differences.
 // ======================================================
 app.get("/schedule/today", async (req, res) => {
   try {
-    const response = await fetch(
-      "https://api.tvmaze.com/schedule"
+    // Format date as YYYY-MM-DD
+    function formatDate(date) {
+      return date.toISOString().split("T")[0];
+    }
+
+    // Create dates
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const dates = [
+      formatDate(yesterday),
+      formatDate(today),
+      formatDate(tomorrow),
+    ];
+
+    // Fetch all three dates in parallel
+    const responses = await Promise.all(
+      dates.map((date) =>
+        fetch(`https://api.tvmaze.com/schedule?country=US&date=${date}`)
+      )
     );
 
-    const data = await response.json();
+    // Convert responses to JSON
+    const results = await Promise.all(
+      responses.map((response) => response.json())
+    );
 
-    const transformed = data.map((episode) => ({
+    // Flatten into one array
+    const allEpisodes = results.flat();
+
+    // Transform into frontend-friendly format
+    const transformed = allEpisodes.map((episode) => ({
       showId: episode.show.id,
       showName: episode.show.name,
       season: episode.season,
       episode: episode.number,
       episodeName: episode.name,
       airTime: episode.airtime,
+      airDate: episode.airdate,
     }));
 
-    res.json(transformed);
+    // Remove duplicates
+    // Unique key = showId + season + episode
+    const uniqueMap = new Map();
+
+    for (const episode of transformed) {
+      const key = `${episode.showId}-${episode.season}-${episode.episode}`;
+
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, episode);
+      }
+    }
+
+    const uniqueEpisodes = Array.from(uniqueMap.values());
+
+    // Sort by air date, then air time
+    uniqueEpisodes.sort((a, b) => {
+      const dateCompare = (a.airDate || "").localeCompare(
+        b.airDate || ""
+      );
+
+      if (dateCompare !== 0) {
+        return dateCompare;
+      }
+
+      return (a.airTime || "").localeCompare(b.airTime || "");
+    });
+
+    console.log(
+      `Fetched ${allEpisodes.length} episodes across 3 days. ` +
+      `Returning ${uniqueEpisodes.length} unique episodes.`
+    );
+
+    res.json(uniqueEpisodes);
   } catch (error) {
+    console.error("Schedule fetch failed:", error);
+
     res.status(500).json({
       error: "Failed to fetch schedule",
       message: error.message,
