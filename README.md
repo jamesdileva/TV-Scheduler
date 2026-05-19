@@ -80,7 +80,6 @@ aws s3 sync dist/ s3://YOUR_BUCKET --delete
 ### Why Some Shows May Be Missing
 - TVMaze may filter by timezone/date
 - Data may not include every region/network
-- Your frontend truncates results
 
 ## Additional Features
 - Search for any show
