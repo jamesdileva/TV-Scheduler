@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = "https://0vs48kzu7i.execute-api.us-east-1.amazonaws.com";
+const API_BASE_URL =
+  "https://0vs48kzu7i.execute-api.us-east-1.amazonaws.com";
 
 function App() {
   const [episodes, setEpisodes] = useState([]);
@@ -8,29 +9,104 @@ function App() {
   const [error, setError] = useState("");
   const [watchlist, setWatchlist] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
-  
-async function deleteShow(showId) {
-  await fetch(`${API_BASE_URL}/watchlist/${showId}`, {
-    method: "DELETE",
-  });
 
-  const res = await fetch(`${API_BASE_URL}/watchlist`);
-  const data = await res.json();
-  setWatchlist(data);
-}
+  // ======================================================
+  // THEME
+  // ======================================================
+  const theme = {
+    background: "#0f172a",
+    card: "#1e293b",
+    cardBorder: "#334155",
+    text: "#e2e8f0",
+    mutedText: "#94a3b8",
+    primary: "#3b82f6",
+    danger: "#ef4444",
+    itemBackground: "#0b1220",
+  };
 
-async function fetchDetails(showName) {
-  const response = await fetch(
-    `${API_BASE_URL}/show-details?name=${encodeURIComponent(showName)}`
-  );
+  // ======================================================
+  // STYLES
+  // ======================================================
+  const appStyle = {
+    padding: "24px",
+    fontFamily: "Arial, sans-serif",
+    backgroundColor: theme.background,
+    minHeight: "100vh",
+    color: theme.text,
+  };
 
-  const data = await response.json();
-  setSelectedShow(data);
-  console.log("Fetching details for:", showName);
-  console.log("Received:", data);
-}
+  const headerStyle = {
+    background: theme.card,
+    border: `1px solid ${theme.cardBorder}`,
+    borderRadius: "12px",
+    padding: "20px",
+    marginBottom: "20px",
+  };
 
-  // Save a show to DynamoDB, then reload watchlist
+  const gridStyle = {
+    display: "grid",
+    gap: "20px",
+    gridTemplateColumns: "1.5fr 1fr 1fr",
+    alignItems: "start",
+  };
+
+  const cardStyle = {
+    background: theme.card,
+    borderRadius: "12px",
+    padding: "16px",
+    border: `1px solid ${theme.cardBorder}`,
+  };
+
+  const scrollSectionStyle = {
+    ...cardStyle,
+    maxHeight: "80vh",
+    overflowY: "auto",
+  };
+
+  const stickyCardStyle = {
+    ...cardStyle,
+    position: "sticky",
+    top: "20px",
+  };
+
+  const itemStyle = {
+    background: theme.itemBackground,
+    border: `1px solid ${theme.cardBorder}`,
+    padding: "12px",
+    borderRadius: "10px",
+    marginBottom: "10px",
+  };
+
+  const buttonStyle = {
+    marginTop: "8px",
+    marginRight: "8px",
+    padding: "6px 12px",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    background: theme.primary,
+    color: "white",
+    fontSize: "14px",
+  };
+
+  const dangerButtonStyle = {
+    ...buttonStyle,
+    background: theme.danger,
+  };
+
+  const mutedTextStyle = {
+    color: theme.mutedText,
+  };
+
+  // ======================================================
+  // API FUNCTIONS
+  // ======================================================
+  async function loadWatchlist() {
+    const response = await fetch(`${API_BASE_URL}/watchlist`);
+    const data = await response.json();
+    setWatchlist(data);
+  }
+
   async function saveShow(episode) {
     await fetch(`${API_BASE_URL}/watchlist`, {
       method: "POST",
@@ -43,12 +119,37 @@ async function fetchDetails(showName) {
       }),
     });
 
-    const response = await fetch(`${API_BASE_URL}/watchlist`);
-    const data = await response.json();
-    setWatchlist(data);
+    await loadWatchlist();
   }
 
-  // Load today's TV schedule
+  async function deleteShow(showId) {
+    await fetch(`${API_BASE_URL}/watchlist/${showId}`, {
+      method: "DELETE",
+    });
+
+    // Clear selected show if it was deleted
+    if (selectedShow && selectedShow.showId === showId) {
+      setSelectedShow(null);
+    }
+
+    await loadWatchlist();
+  }
+
+  async function fetchDetails(showName) {
+    const response = await fetch(
+      `${API_BASE_URL}/show-details?name=${encodeURIComponent(showName)}`
+    );
+
+    const data = await response.json();
+    setSelectedShow(data);
+
+    console.log("Fetching details for:", showName);
+    console.log("Received:", data);
+  }
+
+  // ======================================================
+  // EFFECTS
+  // ======================================================
   useEffect(() => {
     async function fetchSchedule() {
       try {
@@ -61,7 +162,12 @@ async function fetchDetails(showName) {
         }
 
         const data = await response.json();
-        setEpisodes(data.slice(0, 20));
+
+        const sorted = [...data].sort((a, b) =>
+          (a.airTime || "").localeCompare(b.airTime || "")
+        );
+
+        setEpisodes(sorted);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -70,44 +176,29 @@ async function fetchDetails(showName) {
     }
 
     fetchSchedule();
+    loadWatchlist();
   }, []);
 
-  // Load saved watchlist
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/watchlist`)
-      .then((res) => res.json())
-      .then((data) => setWatchlist(data));
-  }, []);
-
+  // ======================================================
+  // RENDER
+  // ======================================================
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial, sans-serif" }}>
-      <header
-        style={{
-          marginBottom: "20px",
-          borderBottom: "2px solid #ddd",
-          paddingBottom: "10px",
-        }}
-      >
-        <h1>📺 TV Scheduler</h1>
-        <p>Your personal TV episode dashboard</p>
+    <div style={appStyle}>
+      {/* Header */}
+      <header style={headerStyle}>
+        <h1 style={{ marginTop: 0, marginBottom: "8px" }}>
+          📺 TV Scheduler
+        </h1>
+        <p style={{ ...mutedTextStyle, margin: 0 }}>
+          Your personal TV episode dashboard
+        </p>
       </header>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: "20px",
-        }}
-      >
+      {/* Main Dashboard */}
+      <div style={gridStyle}>
         {/* Today's Episodes */}
-        <section
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "16px",
-          }}
-        >
-          <h2>Today's Episodes</h2>
+        <section style={scrollSectionStyle}>
+          <h2 style={{ marginTop: 0 }}>Today's Episodes</h2>
 
           {loading && <p>Loading schedule...</p>}
           {error && <p>Error: {error}</p>}
@@ -117,21 +208,24 @@ async function fetchDetails(showName) {
             episodes.map((episode) => (
               <div
                 key={`${episode.showId}-${episode.season}-${episode.episode}`}
-                style={{
-                  padding: "8px 0",
-                  borderBottom: "1px solid #eee",
-                }}
+                style={itemStyle}
               >
                 <strong>{episode.showName}</strong>
-                <br />
-                S{episode.season}E{episode.episode} — {episode.episodeName}
-                <br />
-                <small>{episode.airTime}</small>
+
+                <p style={{ ...mutedTextStyle, margin: "6px 0" }}>
+                  S{episode.season}E{episode.episode} —{" "}
+                  {episode.episodeName}
+                </p>
+
+                <small style={mutedTextStyle}>
+                  Air Time: {episode.airTime || "Unknown"}
+                </small>
+
                 <br />
 
                 <button
                   onClick={() => saveShow(episode)}
-                  style={{ marginTop: "6px" }}
+                  style={buttonStyle}
                 >
                   Save to My Shows
                 </button>
@@ -140,41 +234,54 @@ async function fetchDetails(showName) {
         </section>
 
         {/* My Shows */}
-        <section
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "16px",
-          }}
-        >
-          <h2>My Shows</h2>
-      {watchlist.map((show) => (
-        <div key={show.showId}>
-          <strong>{show.showName}</strong>
+        <section style={cardStyle}>
+          <h2 style={{ marginTop: 0 }}>My Shows</h2>
 
-          <button onClick={() => fetchDetails(show.showName)}>
-            Expand
-          </button>
+          {watchlist.length === 0 && (
+            <p style={mutedTextStyle}>
+              No saved shows yet.
+            </p>
+          )}
 
-          <button onClick={() => deleteShow(show.showId)}>
-            Delete
-          </button>
-        </div>
-      ))}
+          {watchlist.map((show) => (
+            <div
+              key={show.showId}
+              style={itemStyle}
+            >
+              <strong>{show.showName}</strong>
+
+              <div>
+                <button
+                  onClick={() =>
+                    fetchDetails(show.showName)
+                  }
+                  style={buttonStyle}
+                >
+                  Expand
+                </button>
+
+                <button
+                  onClick={() =>
+                    deleteShow(show.showId)
+                  }
+                  style={dangerButtonStyle}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
         </section>
 
         {/* Show Details */}
-        <section
-          style={{
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            padding: "16px",
-          }}
-        >
-          <h2>Show Details</h2>
+        <section style={stickyCardStyle}>
+          <h2 style={{ marginTop: 0 }}>Show Details</h2>
 
           {!selectedShow && (
-            <p>Select a show from your watchlist to see details.</p>
+            <p style={mutedTextStyle}>
+              Select a show from your watchlist to
+              see details.
+            </p>
           )}
 
           {selectedShow && (
@@ -183,14 +290,26 @@ async function fetchDetails(showName) {
 
               {selectedShow.nextEpisode && (
                 <p>
-                  Next Episode Airs: {selectedShow.nextEpisode.airdate}
+                  <strong>Next Episode:</strong>{" "}
+                  {selectedShow.nextEpisode.airdate}
+                </p>
+              )}
+
+              {!selectedShow.nextEpisode && (
+                <p style={mutedTextStyle}>
+                  No upcoming episode information.
                 </p>
               )}
 
               {selectedShow.summary && (
                 <div
+                  style={{
+                    lineHeight: 1.6,
+                    color: theme.text,
+                  }}
                   dangerouslySetInnerHTML={{
-                    __html: selectedShow.summary,
+                    __html:
+                      selectedShow.summary,
                   }}
                 />
               )}
