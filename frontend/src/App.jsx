@@ -306,10 +306,17 @@ function App() {
         gap: "20px",
         marginBottom: "20px",
         alignItems: "start",
+        
       }}
     >
       {/* My Shows */}
-      <section style={cardStyle}>
+      <section
+        style={{
+          ...cardStyle,
+          maxHeight: "40vh",
+          overflowY: "auto",
+        }}
+      >
         <h2 style={{ marginTop: 0 }}>⭐ My Shows</h2>
 
         {watchlist.length === 0 && (

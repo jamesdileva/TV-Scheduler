@@ -143,7 +143,8 @@ app.get("/schedule/today", async (req, res) => {
         (episode) =>
           episode?._embedded?.show?.id != null &&
           episode?._embedded?.show?.name &&
-          episode?._embedded?.show?.language === "English"
+          episode?._embedded?.show?.language === "English" &&
+          !["Talk Show", "News", "Sports"].includes(episode?._embedded?.show?.type)
       )
       .map((episode) => ({
         showId: episode._embedded.show.id,
