@@ -216,7 +216,72 @@ function App() {
       loadSchedule();
       loadWatchlist();
   }, []);
+  function formatDate(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 
+  const now = new Date();
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+
+  const yesterdayDate = formatDate(yesterday);
+  const todayDate = formatDate(now);
+  const tomorrowDate = formatDate(tomorrow);
+
+  const yesterdayEpisodes = episodes.filter(
+    (ep) => ep.airDate === yesterdayDate
+  );
+
+  const todayEpisodes = episodes.filter(
+    (ep) => ep.airDate === todayDate
+  );
+
+  const tomorrowEpisodes = episodes.filter(
+    (ep) => ep.airDate === tomorrowDate
+  );
+
+  function renderEpisodes(list) {
+    if (list.length === 0) {
+      return (
+        <p style={mutedTextStyle}>
+          No episodes found.
+        </p>
+      );
+    }
+
+    return list.map((episode) => (
+      <div
+        key={`${episode.showId}-${episode.season}-${episode.episode}-${episode.airDate}`}
+        style={itemStyle}
+      >
+        <strong>{episode.showName}</strong>
+
+        <p style={{ ...mutedTextStyle, margin: "6px 0" }}>
+          S{episode.season}E{episode.episode} — {episode.episodeName}
+        </p>
+
+        <small style={mutedTextStyle}>
+          {episode.airTime || "Unknown Time"}
+        </small>
+
+        <br />
+
+        <button
+          onClick={() => saveShow(episode)}
+          style={buttonStyle}
+        >
+          Save to My Shows
+        </button>
+      </div>
+    ));
+  }
   // ======================================================
   // RENDER
   // ======================================================
@@ -232,136 +297,136 @@ function App() {
         </p>
       </header>
 
-      {/* Main Dashboard */}
-      <div style={gridStyle}>
-        {/* Today's Episodes */}
-        <section style={scrollSectionStyle}>
-          <h2 style={{ marginTop: 0 }}>Today's Episodes</h2>
-          <div style={{ marginBottom: "16px" }}>
+
+    {/* Top Section: Watchlist + Details */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "20px",
+        marginBottom: "20px",
+        alignItems: "start",
+      }}
+    >
+      {/* My Shows */}
+      <section style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>⭐ My Shows</h2>
+
+        {watchlist.length === 0 && (
+          <p style={mutedTextStyle}>
+            No saved shows yet.
+          </p>
+        )}
+
+        {watchlist.map((show) => (
+          <div
+            key={show.showId}
+            style={itemStyle}
+          >
+            <strong>{show.showName}</strong>
+
+            <div>
               <button
-                onClick={loadSchedule}
+                onClick={() =>
+                  fetchDetails(show.showName)
+                }
                 style={buttonStyle}
               >
-                🔄 Refresh Schedule
+                Expand
+              </button>
+
+              <button
+                onClick={() =>
+                  deleteShow(show.showId)
+                }
+                style={dangerButtonStyle}
+              >
+                Delete
               </button>
             </div>
-          {loading && <p>Loading schedule...</p>}
-          {error && <p>Error: {error}</p>}
+          </div>
+        ))}
+      </section>
 
-          {!loading &&
-            !error &&
-            episodes.map((episode) => (
+      {/* Show Details */}
+      <section style={stickyCardStyle}>
+        <h2 style={{ marginTop: 0 }}>📄 Show Details</h2>
+
+        {!selectedShow && (
+          <p style={mutedTextStyle}>
+            Select a show to see details.
+          </p>
+        )}
+
+        {selectedShow && (
+          <div>
+            <h3>{selectedShow.name}</h3>
+
+            {selectedShow.nextEpisode ? (
+              <p>
+                <strong>Next Episode:</strong>{" "}
+                {selectedShow.nextEpisode.airdate}
+              </p>
+            ) : (
+              <p style={mutedTextStyle}>
+                No upcoming episode information.
+              </p>
+            )}
+
+            {selectedShow.summary && (
               <div
-                key={`${episode.showId}-${episode.season}-${episode.episode}`}
-                style={itemStyle}
-              >
-                <strong>{episode.showName}</strong>
+                style={{ lineHeight: 1.6 }}
+                dangerouslySetInnerHTML={{
+                  __html: selectedShow.summary,
+                }}
+              />
+            )}
+          </div>
+        )}
+      </section>
+    </div>
 
-                <p style={{ ...mutedTextStyle, margin: "6px 0" }}>
-                  S{episode.season}E{episode.episode} —{" "}
-                  {episode.episodeName}
-                </p>
+    {/* Schedule Section */}
+    <section style={cardStyle}>
+      <h2 style={{ marginTop: 0 }}>📅 Episode Schedule</h2>
 
-                <small style={mutedTextStyle}>
-                  Air Time: {episode.airTime || "Unknown"}
-                </small>
-
-                <br />
-
-                <button
-                  onClick={() => saveShow(episode)}
-                  style={buttonStyle}
-                >
-                  Save to My Shows
-                </button>
-              </div>
-            ))}
-        </section>
-
-        {/* My Shows */}
-        <section style={cardStyle}>
-          <h2 style={{ marginTop: 0 }}>My Shows</h2>
-
-          {watchlist.length === 0 && (
-            <p style={mutedTextStyle}>
-              No saved shows yet.
-            </p>
-          )}
-
-          {watchlist.map((show) => (
-            <div
-              key={show.showId}
-              style={itemStyle}
-            >
-              <strong>{show.showName}</strong>
-
-              <div>
-                <button
-                  onClick={() =>
-                    fetchDetails(show.showName)
-                  }
-                  style={buttonStyle}
-                >
-                  Expand
-                </button>
-
-                <button
-                  onClick={() =>
-                    deleteShow(show.showId)
-                  }
-                  style={dangerButtonStyle}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </section>
-
-        {/* Show Details */}
-        <section style={stickyCardStyle}>
-          <h2 style={{ marginTop: 0 }}>Show Details</h2>
-
-          {!selectedShow && (
-            <p style={mutedTextStyle}>
-              Select a show from your watchlist to
-              see details.
-            </p>
-          )}
-
-          {selectedShow && (
-            <div>
-              <h3>{selectedShow.name}</h3>
-
-              {selectedShow.nextEpisode && (
-                <p>
-                  <strong>Next Episode:</strong>{" "}
-                  {selectedShow.nextEpisode.airdate}
-                </p>
-              )}
-
-              {!selectedShow.nextEpisode && (
-                <p style={mutedTextStyle}>
-                  No upcoming episode information.
-                </p>
-              )}
-
-              {selectedShow.summary && (
-                <div
-                  style={{
-                    lineHeight: 1.6,
-                    color: theme.text,
-                  }}
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      selectedShow.summary,
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </section>
+      <div style={{ marginBottom: "16px" }}>
+        <button
+          onClick={loadSchedule}
+          style={buttonStyle}
+        >
+          🔄 Refresh Schedule
+        </button>
       </div>
+
+      {loading && <p>Loading schedule...</p>}
+      {error && <p>Error: {error}</p>}
+
+      {!loading && !error && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr 1fr",
+            gap: "20px",
+          }}
+        >
+          <section style={scrollSectionStyle}>
+            <h3 style={{ marginTop: 0 }}>Yesterday</h3>
+            {renderEpisodes(yesterdayEpisodes)}
+          </section>
+
+          <section style={scrollSectionStyle}>
+            <h3 style={{ marginTop: 0 }}>Today</h3>
+            {renderEpisodes(todayEpisodes)}
+          </section>
+
+          <section style={scrollSectionStyle}>
+            <h3 style={{ marginTop: 0 }}>Tomorrow</h3>
+            {renderEpisodes(tomorrowEpisodes)}
+          </section>
+        </div>
+      )}
+    </section>
     </div>
   );
 }

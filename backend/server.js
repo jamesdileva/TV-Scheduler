@@ -124,74 +124,78 @@ app.delete("/watchlist/:showId", (req, res) => {
     }
   );
 });
-
-// ======================================================
-// GET /schedule/today
-// Fetch yesterday, today, and tomorrow to avoid missing
-// shows because of timezone differences.
-// ======================================================
+// Replace your ENTIRE /schedule/today route with this version.
+// TVMaze's /schedule/full does NOT include episode.show.
+// Instead, it includes _embedded.show.
 app.get("/schedule/today", async (req, res) => {
   try {
-    // Format date as YYYY-MM-DD
+    const response = await fetch(
+      "https://api.tvmaze.com/schedule/full"
+    );
+
+    const data = await response.json();
+
+    console.log(`Full schedule returned ${data.length} episodes.`);
+
+    // Transform from _embedded.show
+    const transformed = data
+      .filter(
+        (episode) =>
+          episode?._embedded?.show?.id != null &&
+          episode?._embedded?.show?.name &&
+          episode?._embedded?.show?.language === "English"
+      )
+      .map((episode) => ({
+        showId: episode._embedded.show.id,
+        showName: episode._embedded.show.name,
+        season: episode.season,
+        episode: episode.number,
+        episodeName: episode.name,
+        airTime: episode.airtime,
+        airDate: episode.airdate,
+      }));
+
+    // Helper to format local dates
     function formatDate(date) {
-      return date.toISOString().split("T")[0];
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
 
-    // Create dates
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
+    const now = new Date();
 
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
 
-    const dates = [
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+
+    const validDates = new Set([
       formatDate(yesterday),
-      formatDate(today),
+      formatDate(now),
       formatDate(tomorrow),
-    ];
+    ]);
 
-    // Fetch all three dates in parallel
-    const responses = await Promise.all(
-      dates.map((date) =>
-        fetch(`https://api.tvmaze.com/schedule?country=US&date=${date}`)
-      )
+    // Keep only yesterday, today, tomorrow
+    const filtered = transformed.filter((episode) =>
+      validDates.has(episode.airDate)
     );
-
-    // Convert responses to JSON
-    const results = await Promise.all(
-      responses.map((response) => response.json())
-    );
-
-    // Flatten into one array
-    const allEpisodes = results.flat();
-
-    // Transform into frontend-friendly format
-    const transformed = allEpisodes.map((episode) => ({
-      showId: episode.show.id,
-      showName: episode.show.name,
-      season: episode.season,
-      episode: episode.number,
-      episodeName: episode.name,
-      airTime: episode.airtime,
-      airDate: episode.airdate,
-    }));
 
     // Remove duplicates
-    // Unique key = showId + season + episode
     const uniqueMap = new Map();
 
-    for (const episode of transformed) {
-      const key = `${episode.showId}-${episode.season}-${episode.episode}`;
+    for (const episode of filtered) {
+      const key = `${episode.showId}-${episode.season ?? "0"}-${
+        episode.episode ?? episode.episodeName ?? "unknown"
+      }`;
 
-      if (!uniqueMap.has(key)) {
-        uniqueMap.set(key, episode);
-      }
+      uniqueMap.set(key, episode);
     }
 
     const uniqueEpisodes = Array.from(uniqueMap.values());
 
-    // Sort by air date, then air time
+    // Sort by date, then time
     uniqueEpisodes.sort((a, b) => {
       const dateCompare = (a.airDate || "").localeCompare(
         b.airDate || ""
@@ -201,12 +205,13 @@ app.get("/schedule/today", async (req, res) => {
         return dateCompare;
       }
 
-      return (a.airTime || "").localeCompare(b.airTime || "");
+      return (a.airTime || "").localeCompare(
+        b.airTime || ""
+      );
     });
 
     console.log(
-      `Fetched ${allEpisodes.length} episodes across 3 days. ` +
-      `Returning ${uniqueEpisodes.length} unique episodes.`
+      `Returning ${uniqueEpisodes.length} episodes for 3 days.`
     );
 
     res.json(uniqueEpisodes);
