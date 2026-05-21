@@ -1,0 +1,44 @@
+{
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^42.2.0",
+    "electron-builder": "^26.8.1",
+    "wait-on": "^9.0.10"
+  },
+  "main": "electron/main.js",
+  "version": "1.0.0",
+  "name": "tvscheduler",
+  "description": "TV Scheduler app that answers the question What is on TV today?",
+  "author": "James",
+ 
+  "scripts": {
+    "frontend": "npm run dev --prefix frontend",
+    "backend": "node backend/server.js",
+    "electron": "electron .",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\" \"wait-on http://localhost:5173 && npm run electron\"",
+    "build": "npm run build --prefix frontend",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.james.tvscheduler",
+    "productName": "TV Scheduler",
+    "asarUnpack": [
+      "backend/**"
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "frontend/dist/**/*",
+      "backend/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+    
+  }
+  
+}

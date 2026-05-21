@@ -12,6 +12,8 @@ function App() {
   const [selectedShow, setSelectedShow] = useState(null);
   const [scheduleSearch, setScheduleSearch] = useState("");
   const [watchlistSearch, setWatchlistSearch] = useState("");
+  const [showDetailsMap, setShowDetailsMap] = useState({});
+  const [popularShows, setPopularShows] = useState([]);
   // ======================================================
   // THEME
   // ======================================================
@@ -106,7 +108,10 @@ function App() {
   async function loadWatchlist() {
     const response = await fetch(`${API_BASE_URL}/watchlist`);
     const data = await response.json();
+
     setWatchlist(data);
+
+    await loadWatchlistDetails(data);
   }
 
   async function saveShow(episode) {
@@ -149,6 +154,35 @@ function App() {
     console.log("Received:", data);
   }
 
+  async function loadWatchlistDetails(shows) {
+    const detailsMap = {};
+
+    for (const show of shows) {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/show-details?name=${encodeURIComponent(
+            show.showName
+          )}`
+        );
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+
+        detailsMap[show.showName] = data;
+      } catch (error) {
+        console.error(
+          "Failed to load details for",
+          show.showName,
+          error
+        );
+      }
+    }
+
+    setShowDetailsMap(detailsMap);
+  }
+
+
   async function loadSchedule() {
     try {
       setLoading(true);
@@ -186,6 +220,24 @@ function App() {
     }
   }
 
+  async function loadPopularShows() {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/popular-shows`
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to load popular shows");
+    }
+
+    const data = await response.json();
+
+    setPopularShows(data);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
   // ======================================================
   // EFFECTS
   // ======================================================
@@ -216,6 +268,7 @@ function App() {
 
       loadSchedule();
       loadWatchlist();
+      loadPopularShows();
   }, []);
   function formatDate(date) {
     const year = date.getFullYear();
@@ -308,6 +361,17 @@ function App() {
         .includes(watchlistSearch.toLowerCase())
     );
 
+
+    function prettyDate(dateString) {
+      return new Date(dateString).toLocaleDateString(
+        "en-US",
+        {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }
+      );
+    }
   // ======================================================
   // RENDER
   // ======================================================
@@ -376,6 +440,30 @@ function App() {
             style={itemStyle}
           >
             <strong>{show.showName}</strong>
+            {showDetailsMap[show.showName]?.nextEpisode ? (
+              <p
+                style={{
+                  ...mutedTextStyle,
+                  margin: "6px 0",
+                  fontSize: "14px",
+                }}
+              >
+                📅 Next Episode:{" "}
+                {
+                  showDetailsMap[show.showName].nextEpisode.airdate
+                }
+              </p>
+            ) : (
+              <p
+                style={{
+                  ...mutedTextStyle,
+                  margin: "6px 0",
+                  fontSize: "14px",
+                }}
+              >
+                📅 No upcoming episode
+              </p>
+            )}
 
             <div>
               <button
@@ -438,6 +526,82 @@ function App() {
       </section>
     </div>
 
+    {/* Popular Shows */}
+    <section style={cardStyle}>
+      <h2 style={{ marginTop: 0 }}>
+        🔥 Popular Shows
+      </h2>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "16px",
+          overflowX: "auto",
+          paddingBottom: "10px",
+        }}
+      >
+        {popularShows.map((show) => (
+          <div
+            key={show.showId}
+            style={{
+              minWidth: "140px",
+              maxWidth: "140px",
+              background: theme.itemBackground,
+              border: `1px solid ${theme.cardBorder}`,
+              borderRadius: "10px",
+              padding: "12px",
+              flexShrink: 0,
+            }}
+          >
+            <img
+              src={show.image}
+              alt={show.name}
+              style={{
+                width: "100%",
+                height: "220px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                marginBottom: "10px",
+              }}
+            />
+
+            <strong>{show.name}</strong>
+
+            <p
+              style={{
+                ...mutedTextStyle,
+                margin: "6px 0",
+              }}
+            >
+              ⭐ {show.rating || "N/A"}
+            </p>
+
+            <p
+              style={{
+                ...mutedTextStyle,
+                fontSize: "13px",
+              }}
+            >
+              {show.genres.join(", ")}
+            </p>
+
+            <button
+              style={buttonStyle}
+              onClick={() =>
+                saveShow({
+                  showId: show.showId,
+                  showName: show.name,
+                })
+              }
+            >
+              Save
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+
+
     {/* Schedule Section */}
     <section style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>📅 Episode Schedule</h2>
@@ -481,17 +645,17 @@ function App() {
           }}
         >
           <section style={scrollSectionStyle}>
-            <h3 style={{ marginTop: 0 }}>Yesterday</h3>
+            <h3>{prettyDate(yesterdayDate)}</h3>
             {renderEpisodes(filteredYesterdayEpisodes)}
           </section>
 
           <section style={scrollSectionStyle}>
-            <h3 style={{ marginTop: 0 }}>Today</h3>
+            <h3>{prettyDate(todayDate)}</h3>
             {renderEpisodes(filteredTodayEpisodes)}
           </section>
 
           <section style={scrollSectionStyle}>
-            <h3 style={{ marginTop: 0 }}>Tomorrow</h3>
+            <h3>{prettyDate(tomorrowDate)}</h3>
             {renderEpisodes(filteredTomorrowEpisodes)}
           </section>
         </div>
