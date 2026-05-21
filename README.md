@@ -2,6 +2,10 @@
 
 A personal TV dashboard built with React and AWS serverless services.
 
+
+# AWS TV scheduler
+http://tv-scheduler-jamesdileva-2026.s3-website-us-east-1.amazonaws.com/
+
 ### Features
 - View today's TV schedule
 - Save favorite shows
