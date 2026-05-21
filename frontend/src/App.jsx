@@ -10,7 +10,8 @@ function App() {
   const [error, setError] = useState("");
   const [watchlist, setWatchlist] = useState([]);
   const [selectedShow, setSelectedShow] = useState(null);
-
+  const [scheduleSearch, setScheduleSearch] = useState("");
+  const [watchlistSearch, setWatchlistSearch] = useState("");
   // ======================================================
   // THEME
   // ======================================================
@@ -282,6 +283,31 @@ function App() {
       </div>
     ));
   }
+
+  const filteredYesterdayEpisodes = yesterdayEpisodes.filter((episode) =>
+      episode.showName
+        .toLowerCase()
+        .includes(scheduleSearch.toLowerCase())
+    );
+
+    const filteredTodayEpisodes = todayEpisodes.filter((episode) =>
+      episode.showName
+        .toLowerCase()
+        .includes(scheduleSearch.toLowerCase())
+    );
+
+    const filteredTomorrowEpisodes = tomorrowEpisodes.filter((episode) =>
+      episode.showName
+        .toLowerCase()
+        .includes(scheduleSearch.toLowerCase())
+    );
+
+    const filteredWatchlist = watchlist.filter((show) =>
+      show.showName
+        .toLowerCase()
+        .includes(watchlistSearch.toLowerCase())
+    );
+
   // ======================================================
   // RENDER
   // ======================================================
@@ -319,13 +345,32 @@ function App() {
       >
         <h2 style={{ marginTop: 0 }}>⭐ My Shows</h2>
 
+        <input
+          type="text"
+          placeholder="Search saved shows..."
+          value={watchlistSearch}
+          onChange={(e) =>
+            setWatchlistSearch(e.target.value)
+          }
+          style={{
+            width: "100%",
+            padding: "8px",
+            marginBottom: "12px",
+            borderRadius: "6px",
+            border: `1px solid ${theme.cardBorder}`,
+            background: theme.itemBackground,
+            color: theme.text,
+            boxSizing: "border-box",
+          }}
+        />
+
         {watchlist.length === 0 && (
           <p style={mutedTextStyle}>
             No saved shows yet.
           </p>
         )}
 
-        {watchlist.map((show) => (
+        {filteredWatchlist.map((show) => (
           <div
             key={show.showId}
             style={itemStyle}
@@ -405,7 +450,25 @@ function App() {
           🔄 Refresh Schedule
         </button>
       </div>
-
+      {/* Search Episodes Section */}
+    <input
+      type="text"
+      placeholder="Search all episodes..."
+      value={scheduleSearch}
+      onChange={(e) =>
+        setScheduleSearch(e.target.value)
+      }
+      style={{
+        width: "100%",
+        padding: "8px",
+        marginBottom: "16px",
+        borderRadius: "6px",
+        border: `1px solid ${theme.cardBorder}`,
+        background: theme.itemBackground,
+        color: theme.text,
+        boxSizing: "border-box",
+      }}
+    />
       {loading && <p>Loading schedule...</p>}
       {error && <p>Error: {error}</p>}
 
@@ -419,17 +482,17 @@ function App() {
         >
           <section style={scrollSectionStyle}>
             <h3 style={{ marginTop: 0 }}>Yesterday</h3>
-            {renderEpisodes(yesterdayEpisodes)}
+            {renderEpisodes(filteredYesterdayEpisodes)}
           </section>
 
           <section style={scrollSectionStyle}>
             <h3 style={{ marginTop: 0 }}>Today</h3>
-            {renderEpisodes(todayEpisodes)}
+            {renderEpisodes(filteredTodayEpisodes)}
           </section>
 
           <section style={scrollSectionStyle}>
             <h3 style={{ marginTop: 0 }}>Tomorrow</h3>
-            {renderEpisodes(tomorrowEpisodes)}
+            {renderEpisodes(filteredTomorrowEpisodes)}
           </section>
         </div>
       )}
