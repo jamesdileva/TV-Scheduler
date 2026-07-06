@@ -3,7 +3,7 @@ import cors from "cors";
 import sqlite3 from "sqlite3";
 
     const app = express();
-    const PORT = 3001;
+    const PORT = 3050;
 
     // ======================================================
     // MIDDLEWARE
@@ -19,7 +19,7 @@ import sqlite3 from "sqlite3";
     db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS watchlist (
-        showId INTEGER PRIMARY KEY,
+        showId TEXT PRIMARY KEY,
         showName TEXT NOT NULL,
         savedAt TEXT DEFAULT CURRENT_TIMESTAMP
         )
@@ -104,7 +104,7 @@ import sqlite3 from "sqlite3";
     // DELETE /watchlist/:showId
     // ======================================================
     app.delete("/watchlist/:showId", (req, res) => {
-    const showId = Number(req.params.showId);
+    const showId = req.params.showId; // Removed the Number() wrapping completely
 
     db.run(
         "DELETE FROM watchlist WHERE showId = ?",

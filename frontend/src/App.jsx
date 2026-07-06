@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 const API_BASE_URL =
   "https://0vs48kzu7i.execute-api.us-east-1.amazonaws.com";
 */
-const API_BASE_URL = "http://localhost:3001";
+
+const API_BASE_URL = "http://127.0.0.1:3050";
 function App() {
   const [episodes, setEpisodes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +15,7 @@ function App() {
   const [watchlistSearch, setWatchlistSearch] = useState("");
   const [showDetailsMap, setShowDetailsMap] = useState({});
   const [popularShows, setPopularShows] = useState([]);
+  const [manualShowName, setManualShowName] = useState("");
   // ======================================================
   // THEME
   // ======================================================
@@ -182,6 +184,27 @@ function App() {
     setShowDetailsMap(detailsMap);
   }
 
+  async function saveShowManually(e) {
+    e.preventDefault();
+    if (!manualShowName.trim()) return;
+
+    // Generate a safe unique ID since it's not coming from TVMaze's schedule API
+    const temporaryId = `manual-${Date.now()}`;
+
+    await fetch(`${API_BASE_URL}/watchlist`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        showId: temporaryId,
+        showName: manualShowName.trim(),
+      }),
+    });
+
+    setManualShowName("");
+    await loadWatchlist();
+  }
 
   async function loadSchedule() {
     try {
@@ -408,7 +431,35 @@ function App() {
         }}
       >
         <h2 style={{ marginTop: 0 }}>⭐ My Shows</h2>
-
+        <form onSubmit={saveShowManually} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          <input
+            type="text"
+            placeholder="Paste show name from open tabs..."
+            value={manualShowName}
+            onChange={(e) => setManualShowName(e.target.value)}
+            style={{
+              flex: 1,
+              padding: "8px",
+              borderRadius: "6px",
+              border: `1px solid ${theme.cardBorder}`,
+              background: theme.itemBackground,
+              color: theme.text,
+              boxSizing: "border-box",
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              ...buttonStyle,
+              marginTop: 0,
+              marginRight: 0,
+              whiteSpace: "nowrap"
+            }}
+          >
+            + Add Show
+          </button>
+        </form>
+        
         <input
           type="text"
           placeholder="Search saved shows..."
